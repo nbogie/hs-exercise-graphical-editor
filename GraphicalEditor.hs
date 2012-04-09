@@ -57,7 +57,7 @@ apply _          (New w h)            = Image $ mkArray (w, h)
 apply (Image ar) (ColorPix x y c)     = Image $ ar // [((x,y),c)]
 apply (Image ar) (VSeg x y1 y2 c)     = Image $ ar // [((x,y),c) | y<- [y1..y2]]
 apply (Image ar) (HSeg x1 x2 y c)     = Image $ ar // [((x,y),c) | x<- [x1..x2]]
-apply (Image ar) (Rect x1 x2 y1 y2 c) = Image $ ar // [((x,y),c) | x<- [x1..x2], y<- [y1..y2]]
+apply (Image ar) (Rect x1 y1 x2 y2 c) = Image $ ar // [((x,y),c) | x<- [x1..x2], y<- [y1..y2]]
 apply _          Exit                 = error "Program Bug: Cmd 'Exit' applied unexpectedly!"
 -- yuck: we don't *intend* to call this apply with Save, but type allows it
 apply (Image _)  (Save _)             = error "Program Bug: Cmd 'Save' not handled at outer apply!"
