@@ -1,7 +1,7 @@
 import Array
 import Control.Monad.Writer  
 import Data.Function (on)
-import Data.List (groupBy, sortBy)
+import Data.List (groupBy, sortBy, foldl')
 import Data.Maybe (mapMaybe)
 import Data.Ord (comparing)
 
@@ -58,11 +58,11 @@ apply (Image ar) (ColorPix x y c)     = Image $ ar // [((x,y),c)]
 apply (Image ar) (VSeg x y1 y2 c)     = Image $ ar // [((x,y),c) | y<- [y1..y2]]
 apply (Image ar) (HSeg x1 x2 y c)     = Image $ ar // [((x,y),c) | x<- [x1..x2]]
 apply (Image ar) (Rect x1 y1 x2 y2 c) = Image $ ar // [((x,y),c) | x<- [x1..x2], y<- [y1..y2]]
+apply (Image ar) (Fill x y c)         = Image $ flood (ar ! (x,y)) c ar (x,y)
 apply _          Exit                 = error "Program Bug: Cmd 'Exit' applied unexpectedly!"
 -- yuck: we don't *intend* to call this apply with Save, but type allows it
 apply (Image _)  (Save _)             = error "Program Bug: Cmd 'Save' not handled at outer apply!"
 -- not implemented
-apply img        (Fill x y c)         = img
 
 mkArray (w,h) 
   | w < 1 || h < 1 = error $ "Bad bounds: " ++ show (w,h)
@@ -79,3 +79,17 @@ displayImage (Image ar) =
   sortBy (comparing y) .  -- flip assocs to row, col
   assocs $ ar
   where y = snd . fst
+
+type Pos = (Int, Int)
+
+flood :: Color -> Color -> MyAr ->  Pos ->  MyAr
+flood origC newC ar p@(x,y) = 
+  if ar ! p /= origC 
+    then ar 
+    else foldl' (flood origC newC) (ar // [(p,newC)]) neighbours
+  where neighbours = filter (inBounds (bounds ar)) $ map offset [(0,-1),(1,0),(0,1),(-1, 0)]
+        offset (xoff,yoff) = (x+xoff, y+yoff)
+
+inBounds ((x1,y1),(x2,y2)) (xq,yq) = 
+  x1 <= xq  && xq <= x2 &&
+  y1 <= yq  && yq <= y2
