@@ -1,7 +1,8 @@
+import Control.Monad.Writer  
 import Data.Maybe (mapMaybe)
 import Data.List (foldl')
 import Array
-main = interact (show . foldCmds . takeWhile ( /= Exit) . mapMaybe parse . lines)
+main = interact (show . snd . runWriter . foldCmds . takeWhile ( /= Exit) . mapMaybe parse . lines) 
 
 type Color = Char
 data Cmd = New Int Int 
@@ -32,16 +33,21 @@ p other                 = Nothing
 type MyAr = Array (Int, Int) Char
 
 data Image = Image MyAr deriving (Show)
+type NamedImage = (String, Image)
 
 
-foldCmds :: [Cmd] -> Image
-foldCmds cs = foldl' apply initImage cs
+foldCmds :: [Cmd] -> Writer [NamedImage] Image
+foldCmds cs = foldM applyM initImage cs
 -- TODO: don't cheat, making an image that wasn't requested.  
 -- The fold's acc should carry a Maybe Image, to represent 
 -- the possibility that it hasn't been initialised yet.
 initImage = Image $ mkArray (1,1)
 
 white = '0'
+applyM :: Image -> Cmd -> Writer [NamedImage] Image
+applyM img       (Save n)             = tell [(n,img)] >> return img
+applyM img       cmd                  = return $ apply img cmd
+
 apply :: Image -> Cmd -> Image
 apply (Image ar) Clear                = Image $ mkArray $ snd $ bounds ar
 apply img        (New w h)            = Image $ mkArray (w, h)
@@ -52,7 +58,6 @@ apply (Image ar) (Rect x1 x2 y1 y2 c) = Image $ ar // [((x,y),c) | x<- [x1..x2],
 apply img        Exit                 = error "Program Bug: Cmd 'Exit' applied unexpectedly!"
 -- not implemented
 apply img        (Fill x y c)         = img
-apply img        (Save n)             = img
 
 mkArray (w,h) 
   | w < 1 || h < 1 = error $ "Bad bounds: " ++ show (w,h)
