@@ -1,8 +1,11 @@
-import Control.Monad.Writer  
-import Data.Maybe (mapMaybe)
-import Data.List (foldl')
 import Array
-main = interact (show . snd . runWriter . foldCmds . takeWhile ( /= Exit) . mapMaybe parse . lines) 
+import Control.Monad.Writer  
+import Data.Function (on)
+import Data.List (foldl', groupBy, sortBy)
+import Data.Maybe (mapMaybe)
+import Data.Ord (comparing)
+
+main = interact (unlines . map display . snd . runWriter . foldCmds . takeWhile ( /= Exit) . mapMaybe parse . lines) 
 
 type Color = Char
 data Cmd = New Int Int 
@@ -63,4 +66,15 @@ mkArray (w,h)
   | w < 1 || h < 1 = error $ "Bad bounds: " ++ show (w,h)
   | otherwise      = array ((1,1),(w,h)) [((x,y),white) | x<- [1..w], y<-[1..h]]
 
-badCmd c = error $ "Bad cmd " ++ show c
+display :: (String, Image) ->String
+display (n,i) = unlines [n, displayImage i]
+
+displayImage :: Image -> String
+displayImage (Image ar) = 
+  unlines . 
+  map (map snd) .
+  groupBy ((==) `on` y) . 
+  sortBy (comparing y) .  -- flip assocs to row, col
+  assocs $ ar
+  where y = snd . fst
+
